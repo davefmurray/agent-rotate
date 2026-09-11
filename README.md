@@ -86,12 +86,14 @@ Agent Rotate routes model requests through an authenticated local proxy. When an
 
 These previews use the real terminal renderer with **sample data**, not live account readings. Click either image for the full-size view. [Image details and regeneration](docs/assets/README.md).
 
+Watch the [25-second feature video](docs/launch/agent-rotate-promo.mp4), or see the [X post drafts, storyboard, and poster](docs/launch/README.md). The animation illustrates account failover and uses the same sample dashboard data.
+
 ## Requirements
 
 - **macOS or Linux**, **Python 3.11+**, and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 - The current native [Claude Code](https://code.claude.com/docs/en/setup) and/or [Codex CLI](https://github.com/openai/codex), installed and signed in for the providers you use.
 - **Two available accounts for each provider where you want failover.** A Claude account cannot serve as a Codex fallback, or vice versa.
-- GitHub access to this repository. It is currently **private**; the clone instructions below use the authenticated [GitHub CLI](https://cli.github.com/).
+- [GitHub CLI](https://cli.github.com/) for the clone command below, or Git for the direct installation option. This repository is public.
 
 The menu bar requires macOS and the optional `menubar` extra. Native Windows, Desktop/IDE routing, and cloud sessions are outside the current scope.
 
@@ -113,12 +115,12 @@ For the optional macOS menu bar, use this install command instead:
 uv tool install '.[menubar]'
 ```
 
-If you already installed the base package, add `--force` to replace that installation with the extra. If the clone needs authentication, run `gh auth login` with an account that has repository access. If `agent-rotate` is missing from your shell afterward, run `uv tool update-shell` and open a new terminal.
+If you already installed the base package, add `--force` to replace that installation with the extra. If GitHub CLI prompts for authentication, run `gh auth login`, or use the direct Git installation below. If `agent-rotate` is missing from your shell afterward, run `uv tool update-shell` and open a new terminal.
 
 <details>
 <summary>Direct Git installation</summary>
 
-If Git is already authenticated for private GitHub repositories:
+Install from the public repository with Git:
 
 ```sh
 uv tool install git+https://github.com/davefmurray/agent-rotate

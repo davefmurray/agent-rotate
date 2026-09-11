@@ -1,0 +1,69 @@
+{
+  "post_primary": "Hit a Claude Code or Codex quota wall mid-session? Agent Rotate is a local router that keeps your native CLI session open and fails a quota-rejected request over to another of your own accounts on the same provider, before a response is delivered. Reply ROTATE for details.",
+  "post_alternate": "Same session. Same model. Same approvals. Agent Rotate is a local router for native Claude Code and Codex: when one of your accounts gets a quota rejection, the request moves to another eligible account on the same provider, with no partial replay. Reply ROTATE for details.",
+  "video_title": "Agent Rotate: Quota Failover Without Leaving Your Session",
+  "creative_direction": "Tone: calm, technical, confident. No hype words. Palette: navy #0B1220 background, cyan #22D3EE for live/active states, lime #A3E635 for success and the CTA, muted slate #94A3B8 for secondary text, red #F87171 used once for the 429 moment. Type: JetBrains Mono for terminal and labels, Inter Semibold for headlines. Motion language: terminal-style reveals, thin cyan connector lines, easing ease-out-cubic 300-500ms, no bounces. Grain-free, subtle vignette. Every scene readable with sound off; no voiceover dependency. A persistent 'SAMPLE DATA' or 'ILLUSTRATION' chip appears whenever dashboards or switching diagrams are on screen.",
+  "scenes": [
+    {
+      "id": 1,
+      "time": "0.0-2.5s",
+      "name": "Hook: the wall",
+      "headline": "429: quota exceeded.",
+      "subhead": "Your session just stopped.",
+      "on_screen_copy": "Terminal line: 'claude> refactoring auth module...' then a red '429 quota_exceeded' line slams in.",
+      "motion": "Open on a dark terminal already mid-task (frame 0 must show text, not black). At 0.6s the 429 line hard-cuts in red with a 2-frame screen shake and a soft red edge glow. Headline types in by 1.4s, subhead fades up at 1.9s. Cursor blinks throughout.",
+      "assets": "Rendered terminal mock (not a real account), red glow overlay, monospace type."
+    },
+    {
+      "id": 2,
+      "time": "2.5-6.5s",
+      "name": "Introduce",
+      "headline": "Agent Rotate",
+      "subhead": "A local router for native Claude Code and Codex.",
+      "on_screen_copy": "Small chip: 'v0.2.0 · runs on your machine · your own accounts'.",
+      "motion": "Red glow drains to navy. Wordmark scales from 96% to 100% with a cyan underline drawing left to right. Subhead rises 12px into place. Chip fades in at 5s. Thin cyan line from wordmark begins extending toward the next scene.",
+      "assets": "Agent Rotate wordmark, cyan underline, chip component."
+    },
+    {
+      "id": 3,
+      "time": "6.5-13.0s",
+      "name": "The failover (ILLUSTRATION)",
+      "headline": "Failover before a response is delivered.",
+      "subhead": "Same provider. Same model. Same session. No partial replay.",
+      "on_screen_copy": "Top-left chip: 'ILLUSTRATION'. Diagram nodes: 'Claude Code session' → 'Agent Rotate' → 'Account A' and 'Account B (same provider)'. A request pill labeled 'request' travels session → router → Account A. Account A flashes '429'. Pill returns to router and goes to Account B. Account B lights lime 'OK'. Footer: 'Scope: the quota-rejected request is retried on another eligible account of the same provider before any response is delivered.'",
+      "motion": "Nodes draw in with connector lines 6.5-7.8s. Request pill travels 8.0-9.0s. 429 flash at 9.2s (red, 300ms). Pill re-routes 9.5-10.8s. Lime OK at 10.9s. Headline and subhead hold; footer sentence fades in at 11.2s and holds to 13.0s. The session node never changes state, reinforcing 'same session'.",
+      "assets": "Vector node/connector system, request pill, ILLUSTRATION chip, red/lime status pulses."
+    },
+    {
+      "id": 4,
+      "time": "13.0-18.5s",
+      "name": "Visibility",
+      "headline": "See every account's quota at a glance.",
+      "subhead": "Shared quota monitoring · cooldown and reset timers · credential health",
+      "on_screen_copy": "Chip: 'SAMPLE DATA'. Dashboard shows provider pools with usage bars, reset countdowns, and health dots. Callout labels appear on: a usage bar, a reset timer, a health indicator.",
+      "motion": "Real dashboard preview image slides in from the right with a slight 3D tilt settling to flat by 13.8s. Three cyan callout lines draw to their targets in sequence at 14.5s, 15.5s, 16.5s, each label typing in. Subhead items appear as three chips, one per callout. Gentle 2% slow push-in across the scene.",
+      "assets": "Actual dashboard preview PNGs from the README (sample data only), callout line component, SAMPLE DATA chip."
+    },
+    {
+      "id": 5,
+      "time": "18.5-22.0s",
+      "name": "Control",
+      "headline": "You stay in control.",
+      "subhead": "Separate provider pools, sticky by default. Native approvals and sandbox unchanged.",
+      "on_screen_copy": "Four compact feature tiles: 'Project-to-pool mappings', 'Optional proactive thresholds', 'Saved session resume', 'Read-only MCP tools'. Footer note in slate: 'Routing applies to wrapper-launched sessions.'",
+      "motion": "Tiles cascade in with 80ms stagger from 18.7s. Each tile has a thin cyan left rule. Footer note fades in at 20.8s and holds. Headline stays anchored top-left throughout.",
+      "assets": "Tile component, small line icons (monochrome), footer text."
+    },
+    {
+      "id": 6,
+      "time": "22.0-25.0s",
+      "name": "CTA",
+      "headline": "Want access?",
+      "subhead": "Reply ROTATE for details.",
+      "on_screen_copy": "Below subhead, small text: 'Agent Rotate 0.2.0 · private repo · your own accounts'. Wordmark bottom-right.",
+      "motion": "Cut to clean navy. Headline scales in from 97% by 22.4s. Subhead appears at 22.8s inside a lime-outlined pill that draws its border clockwise over 500ms. Small text fades at 23.5s. Hold static from 24.0s to 25.0s so the final frame reads as a thumbnail. Optional: cursor blink on the pill for loop feel.",
+      "assets": "Lime pill component, wordmark, end-frame lockup."
+    }
+  ],
+  "production_notes": "Deliver 1920x1080, 30fps, H.264, 25.0s exact, plus a 16:9 poster frame from scene 1 at 1.0s (429 visible) and one from scene 6 at 24.5s. Keep all text inside a 5% safe margin; minimum text size 36px for the X feed. No audio required; if adding a bed, keep it low and mix a single soft click on the lime OK moment only. Never show real account names, emails, tokens, or live quota numbers; dashboard frames must carry the SAMPLE DATA chip for their full duration, and scene 3 must carry ILLUSTRATION for its full duration. Do not add copy implying unlimited use, bypassing limits, speed or cost savings, API or model fallback, automatic billing, user results, or testimonials; do not claim natural quota exhaustion has been verified. Do not say 'available now', 'download', or 'open source'. Scene 3 footer sentence is the only place to describe scope and must appear verbatim. Send me the render with per-scene timestamps and I will review against this storyboard."
+}

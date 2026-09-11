@@ -1,0 +1,27 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "duration_seconds": 25.0,
+  "frames": 750,
+  "codec": "h264",
+  "pixel_format": "yuv420p(progressive)",
+  "audio": "none (intentional)",
+  "decode": "passed",
+  "faststart": true,
+  "static_end_card_seconds": 3,
+  "poster_timestamp_seconds": 1.0,
+  "label_persistence": "checked at start, middle, and end of each illustrated/sample scene",
+  "bytes": 650849,
+  "sha256": "b0c1bbbe841f9224524c9d9cdebb35c333ed8e281d94cf2e5b1ac13ec06aec56",
+  "posts": {
+    "x-post.txt": {
+      "raw_characters": 292,
+      "x_weighted_characters": 272
+    },
+    "x-post-alternate.txt": {
+      "raw_characters": 295,
+      "x_weighted_characters": 275
+    }
+  }
+}

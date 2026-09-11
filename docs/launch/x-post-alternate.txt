@@ -1,0 +1,1 @@
+Same session. Same model. Same approvals. Agent Rotate is a local router for native Claude Code and Codex. When one of your accounts gets a quota rejection, the request moves to another eligible account you own on the same provider. No partial replay. https://github.com/davefmurray/agent-rotate

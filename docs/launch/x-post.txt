@@ -1,0 +1,1 @@
+Hit a Claude Code or Codex quota wall mid-session? Agent Rotate is a local router that keeps your native CLI session open and retries the quota-rejected request on another of your own accounts, same provider, before any response lands. Public repo: https://github.com/davefmurray/agent-rotate

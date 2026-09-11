@@ -1,0 +1,9 @@
+{
+  "post_primary": "Hit a Claude Code or Codex quota wall mid-session? Agent Rotate is a local router that keeps your native CLI session open and retries the quota-rejected request on another of your own accounts, same provider, before any response lands. Public repo: https://github.com/davefmurray/agent-rotate",
+  "post_alternate": "Same session. Same model. Same approvals. Agent Rotate is a local router for native Claude Code and Codex. When one of your accounts gets a quota rejection, the request moves to another eligible account you own on the same provider. No partial replay. https://github.com/davefmurray/agent-rotate",
+  "cta_headline": "Agent Rotate 0.2.0",
+  "cta_main_line": "Local quota failover for native Claude Code and Codex",
+  "cta_url_line": "github.com/davefmurray/agent-rotate",
+  "cta_small_line": "Sample dashboard data shown. Tested with injected 429s and real fallback inference; natural quota exhaustion not yet verified.",
+  "notes": "Repo is public, so both posts drop the 'Reply ROTATE' gate and link the repo directly. Weighted lengths: primary 270, alternate 275 (URL counted as 23). 'Public repo' used instead of 'open source' since license is not confirmed. Copy stays within verified claims: same-provider, user-owned accounts, pre-delivery retry, no partial replay, native approvals/model preserved. No unlimited, bypass, savings, billing, or testimonial claims. Video ending: hold headline and main line for 22-25s with the URL in a separate 36-48px line and the small line as a disclaimer under it; sample renderer footage stays labelled as sample data. Requires launching via the wrapper and having an eligible fallback account available; state this in the README-linked docs rather than the post."
+}
