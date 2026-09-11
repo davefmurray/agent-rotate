@@ -30,6 +30,8 @@ Only 127.0.0.1 is bound. Every request requires a random capability header, and 
 
 ## Deliberate next work
 
+See [feature research](feature-research.md) for a source-reviewed proposal covering shared usage polling, a session dashboard, account pools, and later MCP/usage-planning features. These are proposals, not shipped capabilities.
+
 - Live verification of a natural provider quota transition, separately for Claude and Codex.
 - Per-session UI showing routing state instead of the native original-account label.
 - Better model/bucket mapping as providers expose new rate-limit windows.
