@@ -2,7 +2,7 @@
 
 Keep the real **Claude Code and Codex terminal sessions** running when a subscription reaches its quota. Agent Rotate routes model requests through an authenticated local HTTP/SSE proxy. A rejected request can move to another account without restarting the CLI or replaying the conversation.
 
-**0.1.0 is an early release.** Both real CLIs have passed an injected-429 test followed by successful inference on the second real account ([verification](docs/verification.md)). It combines [Claude Rotate](https://github.com/evrenverse/claude-rotate)'s OAuth/account ownership with a new native Codex account adapter, request router, shared cooldowns, and agent plugin. It does not modify the original Claude Rotate installation or replace your aliases.
+**0.1.0 is an early release.** Both real CLIs have passed injected-429 tests followed by successful inference on the second real account, including a switch after one completed tool call ([verification](docs/verification.md)). It combines [Claude Rotate](https://github.com/evrenverse/claude-rotate)'s OAuth/account ownership with a new native Codex account adapter, request router, shared cooldowns, and agent plugin. It does not modify the original Claude Rotate installation or replace your aliases.
 
 ## What improves on launch-time rotation
 

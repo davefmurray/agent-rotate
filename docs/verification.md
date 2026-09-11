@@ -20,6 +20,24 @@ uv run python scripts/verify_live.py --provider claude
 uv run python scripts/verify_live.py --provider codex
 ```
 
+## Switching after a completed tool call
+
+The `--after-tool` variant lets the native CLI execute one harmless `printf ROTATE_TOOL_OK`, then injects a 429 on the next model request. Both providers completed this check with the second real account. The successful fallback request included the diagnostic tool result in its history; the native process executed exactly one tool call and returned `ROTATE_OK`.
+
+| Provider | Injected 429 | Real successful requests | Tool calls | Tool result in request history | Native exit |
+| --- | --- | --- | --- | --- | --- |
+| Claude | 1 | 2 | 1 | Yes | 0 |
+| Codex | 1 | 2 | 1 | Yes | 0 |
+
+```sh
+uv run python scripts/verify_live.py --provider claude --after-tool
+uv run python scripts/verify_live.py --provider codex --after-tool
+```
+
+The Claude diagnostic uses Sonnet and allows only its Bash tool with the `printf` command. The Codex diagnostic uses its configured model and a read-only sandbox. These choices apply to the verification script only; normal routing preserves the user's model and permissions. The detector recognizes Claude tool results and Codex function/custom tool outputs, including structured text content. Local regression tests distinguish actual results from marker text in prompts or tool-call arguments.
+
+During development, some Codex runs completed successfully with one tool call and two accepted model requests but did not expose the marker in a recognized tool result. They were treated as failed verification, not counted as proof of history preservation. The passing run above did expose it. This short test does not establish portability of every encrypted or compacted history format.
+
 ## Other checks
 
 - Normal native Claude and Codex requests succeeded through the router.
@@ -28,5 +46,6 @@ uv run python scripts/verify_live.py --provider codex
 - Native Claude auth is preserved: the gateway-token override that disabled claude.ai connectors was removed and the live smoke rerun successfully.
 - Automated tests cover local upstream rejection, streaming, child process continuity/exit, shared cooldowns, bounded attempts, request integrity, account headers, redirect refusal, auth refresh boundaries, and secret-free metadata.
 - Ruff, package build, Codex plugin manifest validation, and skill validation pass.
+- 46 automated tests pass locally; the initial 42-test commit passed GitHub CI on macOS/Linux with Python 3.11/3.12.
 
 Natural provider quota transitions, provider-side cache/encrypted-history portability over long conversations, all connectors, and all CLI commands are not exhaustively verified. The documented no-replay boundary applies after the first forwarded stream event.
