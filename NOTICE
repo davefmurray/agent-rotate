@@ -1,0 +1,7 @@
+Agent Rotate integrates the MIT-licensed claude-rotate package by evrenverse
+(https://github.com/evrenverse/claude-rotate), pinned in pyproject.toml and uv.lock.
+That dependency retains its upstream source and license. Its OAuth and credential
+management implementation is used through its package interface, not copied here.
+
+Claude, Anthropic, Codex, OpenAI, and ChatGPT are names of their respective owners.
+This is an independent project, not an official provider product.

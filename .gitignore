@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+.DS_Store
+.env*
+auth.json
+accounts.json
+.credentials.json
+*.sqlite*
+*.log
+.agent-rotate/
