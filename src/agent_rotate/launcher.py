@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import shutil
 import signal
 import sys
+from pathlib import Path
 
+from agent_rotate.collector import Collector
 from agent_rotate.credentials import Credentials
 from agent_rotate.proxy import Router
 from agent_rotate.store import Store
@@ -66,39 +69,79 @@ def invocation(
     return [binary, *overrides, *args], child_env
 
 
-async def run(store: Store, provider: str, args: list[str], account: str | None = None) -> int:
+async def run(
+    store: Store,
+    provider: str,
+    args: list[str],
+    account: str | None = None,
+    *,
+    pool: str | None = None,
+    strategy: str = "sticky",
+    threshold: float | None = None,
+    cwd: Path | None = None,
+) -> int:
+    cwd = (cwd or Path.cwd()).expanduser().resolve()
+    args = list(args)
+    if provider == "codex":
+        # Account mapping follows Codex's actual project directory, including -C.
+        for i, arg in enumerate(args):
+            if arg == "--":
+                break
+            if arg in {"-C", "--cd"} and i + 1 < len(args):
+                cwd = await asyncio.to_thread(
+                    lambda base=cwd, value=args[i + 1]: (base / Path(value).expanduser()).resolve()
+                )
+                args[i + 1] = str(cwd)
+                break
+            if arg.startswith("--cd="):
+                cwd = await asyncio.to_thread(
+                    lambda base=cwd, value=arg: (
+                        base / Path(value.split("=", 1)[1]).expanduser()
+                    ).resolve()
+                )
+                args[i] = "--cd=" + str(cwd)
+                break
+    if not cwd.is_dir():
+        raise ValueError("Working directory does not exist")
+    if account and pool:
+        raise ValueError("Choose an account or a pool, not both")
+    if not account and not pool:
+        pool = store.resolve_pool(provider, cwd)
     if not any(a.enabled for a in store.accounts(provider)):
         raise ValueError(f"No enabled {provider} accounts; run agent-rotate login/import first")
     if account and not any(a.name == account and a.enabled for a in store.accounts(provider)):
         raise ValueError("Selected account does not exist or is disabled")
+    if pool and not any(
+        a.enabled and a.name in store.pool_members(provider, pool) for a in store.accounts(provider)
+    ):
+        raise ValueError("Selected pool has no enabled accounts")
     credentials = Credentials()
-    # Read live quotas without making an inference request. Unknown usage remains unknown.
-    for item in store.accounts(provider):
-        if item.enabled:
-            try:
-                store.set_usage(item, await credentials.usage(item))
-            except (RuntimeError, OSError, ValueError, TimeoutError):
-                print(
-                    f"[agent-rotate] {item.name}: usage unavailable; routing will use responses",
-                    file=sys.stderr,
-                )
+    collector = Collector(store, credentials)
+    await collector.once(provider)
     router = Router(
         store,
         provider,
         credentials,
         account=account,
+        pool=pool,
+        strategy=strategy,
+        threshold=threshold,
+        cwd=str(cwd),
         reporter=lambda m: print(f"\r\n[agent-rotate] {m}", file=sys.stderr),
     )
     child = None
     loop = asyncio.get_running_loop()
     installed = []
+    background = None
     try:
         await router.start()
         command, env = invocation(provider, args, router.url, router.key)
+        env["AGENT_ROTATE_SESSION_ID"] = router.session_id
         if provider == "codex":
             env.pop("OPENAI_API_KEY", None)
             env.pop("CODEX_API_KEY", None)
-        child = await asyncio.create_subprocess_exec(*command, env=env)
+        child = await asyncio.create_subprocess_exec(*command, env=env, cwd=cwd)
+        background = asyncio.create_task(collector.run(provider))
         # Ctrl-C belongs to the native CLI (often cancels one turn). It must not kill
         # the router out from under an otherwise live session.
         loop.add_signal_handler(signal.SIGINT, lambda: None)
@@ -112,6 +155,10 @@ async def run(store: Store, provider: str, args: list[str], account: str | None 
         code = await child.wait()
         return code if code >= 0 else 128 - code
     finally:
+        if background:
+            background.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await background
         for sig in installed:
             loop.remove_signal_handler(sig)
         if child and child.returncode is None:

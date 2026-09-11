@@ -5,3 +5,9 @@ management implementation is used through its package interface, not copied here
 
 Claude, Anthropic, Codex, OpenAI, and ChatGPT are names of their respective owners.
 This is an independent project, not an official provider product.
+
+Feature research for 0.2.0 reviewed these MIT-licensed projects:
+vaskoyudha/CodexCLI-Rotate (vaskoyudha and contributors), realiti4/claude-swap
+(Onur Cetinkol), and uwuclxdy/clauth (cloudy). Their interface/policy ideas informed
+the roadmap; no implementation code was copied. Pinned source references are in
+docs/feature-research.md.

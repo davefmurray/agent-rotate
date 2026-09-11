@@ -1,6 +1,6 @@
 # Features worth adapting
 
-Reviewed 2026-09-11. This is a proposed roadmap from README and source inspection, not a claim that these features have shipped or that the external tools were runtime-tested. No external implementation was copied or executed.
+Reviewed 2026-09-11. The roadmap below records the original source review. **Version 0.2.0 implements its shared collector, dashboard/menu bar, alerts, pools/mappings, advisory forecasts, optional routing strategies, cached MCP, credential health, session browser, completion, and explicit delegated jobs.** See [the command guide](commands.md) for shipped behavior and boundaries. External tools were not runtime-tested, and no external implementation was copied or executed. Signed standalone distribution, quota-window priming and remote control remain outside this update.
 
 ## Sources and licenses
 

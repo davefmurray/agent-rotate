@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import math
 import sys
 import time
 from dataclasses import dataclass, field
@@ -13,12 +14,20 @@ from pathlib import Path
 
 import aiohttp
 
-from agent_rotate.rpc import account_rpc
+from agent_rotate.rpc import AccountRPCError, account_rpc
 from agent_rotate.store import Account
 
 
 class CredentialError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, permanent: bool = False):
+        super().__init__(message)
+        self.permanent = permanent
+
+
+class UsageError(RuntimeError):
+    def __init__(self, kind: str, retry_at: float = 0):
+        super().__init__("Usage unavailable; check cached status")
+        self.kind, self.retry_at = kind, retry_at
 
 
 @dataclass(frozen=True)
@@ -49,7 +58,7 @@ def expiry(token: str) -> float:
 
 
 def timestamp(value) -> float | None:
-    if isinstance(value, (float, int)):
+    if isinstance(value, (float, int)) and math.isfinite(value):
         return float(value)
     if isinstance(value, str):
         try:
@@ -65,9 +74,15 @@ def claude_windows(payload: dict) -> list[dict]:
             "name": name,
             "used_percent": float(w["utilization"]),
             "resets_at": timestamp(w.get("resets_at")),
+            "period_seconds": 18000
+            if name == "five_hour"
+            else (604800 if name.startswith("seven_day") else None),
         }
         for name, w in payload.items()
-        if isinstance(w, dict) and isinstance(w.get("utilization"), (int, float))
+        if isinstance(w, dict)
+        and isinstance(w.get("utilization"), (int, float))
+        and math.isfinite(w["utilization"])
+        and w["utilization"] >= 0
     ]
 
 
@@ -77,13 +92,23 @@ def codex_windows(payload: dict) -> list[dict]:
     for bucket, limits in buckets.items():
         for name in ("primary", "secondary"):
             w = limits.get(name)
-            if isinstance(w, dict) and isinstance(w.get("usedPercent"), (int, float)):
+            if (
+                isinstance(w, dict)
+                and isinstance(w.get("usedPercent"), (int, float))
+                and math.isfinite(w["usedPercent"])
+                and w["usedPercent"] >= 0
+            ):
                 result.append(
                     {
                         "name": name,
                         "bucket": bucket,
                         "used_percent": float(w["usedPercent"]),
                         "resets_at": timestamp(w.get("resetsAt")),
+                        "period_seconds": (
+                            w["windowDurationMins"] * 60
+                            if isinstance(w.get("windowDurationMins"), (int, float))
+                            else None
+                        ),
                     }
                 )
     return result
@@ -105,7 +130,9 @@ class Credentials:
                 if isinstance(exc, CredentialError):
                     raise
                 raise CredentialError(
-                    f"{account.provider}/{account.name}: credential unavailable; sign in again"
+                    f"{account.provider}/{account.name}: credential unavailable; "
+                    "check login/network",
+                    permanent=isinstance(exc, AccountRPCError) and exc.permanent,
                 ) from None
 
     async def _claude(self, account: Account, refresh: bool) -> Credential:
@@ -122,7 +149,7 @@ class Credentials:
             )
             try:
                 await asyncio.wait_for(proc.wait(), 45)
-            except TimeoutError:
+            except (TimeoutError, asyncio.CancelledError):
                 proc.kill()
                 await proc.wait()
                 raise
@@ -167,5 +194,17 @@ class Credentials:
                 allow_redirects=False,
             ) as response:
                 if response.status != 200:
-                    raise CredentialError(f"claude/{account.name}: usage HTTP {response.status}")
+                    from agent_rotate.proxy import cooldown_until
+
+                    kind = (
+                        "usage_429"
+                        if response.status == 429
+                        else ("usage_auth" if response.status in (401, 403) else "usage_http")
+                    )
+                    raise UsageError(
+                        kind,
+                        cooldown_until(response.headers, b"{}", time.time())
+                        if response.status == 429
+                        else 0,
+                    )
                 return claude_windows(await response.json())

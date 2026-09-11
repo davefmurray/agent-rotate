@@ -1,6 +1,6 @@
 {
   "name": "agent-rotate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Account pools, quota reporting, and request-level failover for native Claude and Codex CLIs",
   "author": {"name": "Dave Murray"},
   "repository": "https://github.com/davefmurray/agent-rotate",

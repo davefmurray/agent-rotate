@@ -2,7 +2,9 @@
 
 Keep the real **Claude Code and Codex terminal sessions** running when a subscription reaches its quota. Agent Rotate routes model requests through an authenticated local HTTP/SSE proxy. A rejected request can move to another account without restarting the CLI or replaying the conversation.
 
-**0.1.0 is an early release.** Both real CLIs have passed injected-429 tests followed by successful inference on the second real account, including a switch after one completed tool call ([verification](docs/verification.md)). It combines [Claude Rotate](https://github.com/evrenverse/claude-rotate)'s OAuth/account ownership with a new native Codex account adapter, request router, shared cooldowns, and agent plugin. It does not modify the original Claude Rotate installation or replace your aliases.
+**0.2.0 adds shared quota monitoring, a terminal dashboard and macOS menu bar, project account pools, optional proactive policies, credential health, cached MCP tools, and explicit native jobs.** Both real CLIs have passed injected-429 tests followed by successful inference on the second real account, including a switch after one completed tool call ([verification](docs/verification.md)). It combines [Claude Rotate](https://github.com/evrenverse/claude-rotate)'s OAuth/account ownership with a native Codex account adapter and request router.
+
+See the [complete command guide](docs/commands.md) for the new features, opt-in settings, and limits.
 
 ## What improves on launch-time rotation
 
@@ -22,6 +24,9 @@ Requires macOS/Linux, Python 3.11+, [uv](https://docs.astral.sh/uv/), and curren
 
 ```sh
 uv tool install git+https://github.com/davefmurray/agent-rotate
+
+# macOS, including the optional menu-bar interface:
+uv tool install 'agent-rotate[menubar] @ git+https://github.com/davefmurray/agent-rotate'
 
 # Reuse the accounts already registered with Claude Rotate. No token copies.
 agent-rotate import-claude
@@ -60,6 +65,8 @@ agent-rotate enable codex work
 agent-rotate status --json
 agent-rotate status --cached
 agent-rotate history
+agent-rotate watch
+agent-rotate menubar  # macOS with the optional extra
 ```
 
 Run the wrapper to get in-session routing. Your existing `claude` alias and direct `codex` command keep their existing behavior. Open sessions aren't retrofitted automatically. Ctrl-C remains owned by the native CLI. Closing the native CLI shuts down its router.
@@ -93,6 +100,8 @@ Routing is to the official provider hosts. No provider-to-provider fallback, API
 ## Agent plugin
 
 The repository includes `.codex-plugin/plugin.json`, `.claude-plugin/plugin.json`, and `skills/rotation/SKILL.md`. Install the plugin through your agent's local/plugin workflow, or load it in Claude with `claude --plugin-dir /path/to/agent-rotate`. The skill exposes setup/status/launch instructions; the CLI router does the switching. See [AGENTS.md](AGENTS.md) for implementation rules and [SETUP.md](SETUP.md) for an agent-led installation checklist.
+
+The plugin also loads `.mcp.json` for cached, read-only account/session tools. Delegated jobs require separate explicit opt-in; see [MCP and jobs](docs/commands.md#mcp-and-plugin).
 
 ## Develop
 

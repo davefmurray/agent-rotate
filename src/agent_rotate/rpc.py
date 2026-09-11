@@ -9,6 +9,24 @@ import shutil
 from pathlib import Path
 
 
+class AccountRPCError(RuntimeError):
+    def __init__(self, *, permanent: bool = False):
+        super().__init__("Codex account request failed; check account login/network")
+        self.permanent = permanent
+
+
+def revoked_error(value) -> bool:
+    """Only explicit structured OAuth error codes justify quarantine."""
+    codes = {"invalid_grant", "refresh_token_reused", "refresh_token_expired", "token_revoked"}
+    if isinstance(value, dict):
+        return any(
+            (k in {"code", "type", "error"} and isinstance(v, str) and v in codes)
+            or revoked_error(v)
+            for k, v in value.items()
+        )
+    return False
+
+
 async def account_rpc(home: Path, method: str, params: dict | None = None) -> dict:
     binary = shutil.which("codex")
     if not binary:
@@ -39,7 +57,7 @@ async def account_rpc(home: Path, method: str, params: dict | None = None) -> di
             if message.get("id") == ident and "method" not in message:
                 if "error" in message:
                     # Do not surface arbitrary RPC error payloads (may include auth data).
-                    raise RuntimeError(f"Codex {rpc_method} failed; check account login")
+                    raise AccountRPCError(permanent=revoked_error(message["error"]))
                 return message["result"]
             if "id" in message and "method" in message:
                 process.stdin.write(
@@ -66,7 +84,7 @@ async def account_rpc(home: Path, method: str, params: dict | None = None) -> di
                     "clientInfo": {
                         "name": "agent_rotate",
                         "title": "Agent Rotate",
-                        "version": "0.1.0",
+                        "version": "0.2.0",
                     }
                 },
             )

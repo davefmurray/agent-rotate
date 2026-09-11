@@ -1,6 +1,6 @@
 {
   "name": "agent-rotate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Account pools, quota reporting, and request-level failover for native Claude and Codex CLIs",
   "author": {
     "name": "Dave Murray"
@@ -9,10 +9,11 @@
   "interface": {
     "displayName": "Agent Rotate",
     "shortDescription": "Manage Claude and Codex account quotas.",
-    "longDescription": "Inspect account pools and launch native coding sessions with automatic failover on rejected model requests.",
+    "longDescription": "Monitor Claude and Codex quotas, manage project account pools, and inspect live routed sessions through cached MCP tools.",
     "developerName": "Dave Murray",
     "category": "Productivity",
     "capabilities": [],
     "defaultPrompt": "Help me use Agent Rotate."
-  }
+  },
+  "mcpServers": "./.mcp.json"
 }

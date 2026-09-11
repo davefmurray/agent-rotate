@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import hmac
 import json
 import math
+import os
 import secrets
 import time
+import uuid
 from collections.abc import Callable
 from email.utils import parsedate_to_datetime
 
@@ -15,7 +18,7 @@ import aiohttp
 from aiohttp import web
 
 from agent_rotate.credentials import Credential, CredentialError, Credentials
-from agent_rotate.store import Account, Store, availability
+from agent_rotate.store import Account, Store, availability, relevant_windows, usage_fresh
 
 UPSTREAMS = {
     "claude": "https://api.anthropic.com",
@@ -135,9 +138,28 @@ class Router:
         account: str | None = None,
         reporter: Callable[[str], None] | None = None,
         upstream: str | None = None,
+        pool: str | None = None,
+        strategy: str = "sticky",
+        threshold: float | None = None,
+        cwd: str | None = None,
     ):
         self.store, self.provider, self.credentials = store, provider, credentials
         self.restrict_account = account
+        if account and pool:
+            raise ValueError("Choose an account or a pool, not both")
+        if strategy not in {"sticky", "consume-first", "ordered"}:
+            raise ValueError("Unknown routing strategy")
+        if threshold is not None and not 50 <= threshold <= 99:
+            raise ValueError("Proactive threshold must be between 50 and 99 percent")
+        if pool:
+            store.pool_members(provider, pool)
+        self.pool, self.strategy, self.threshold = pool, strategy, threshold
+        self.session_id, self.cwd = uuid.uuid4().hex, cwd or os.getcwd()
+        self.changed_at = 0.0
+        self.in_flight = 0
+        self.heartbeat_task = None
+        self.alert_tasks = set()
+        self.last_reason = "starting"
         self.report = reporter or (lambda _: None)
         self.upstream = upstream or UPSTREAMS[provider]
         self.key = secrets.token_urlsafe(32)
@@ -162,36 +184,131 @@ class Router:
         site = web.TCPSite(self.runner, "127.0.0.1", 0)
         await site.start()
         self.url = f"http://127.0.0.1:{self.runner.addresses[0][1]}"
+        self.store.start_session(self.session_id, self.provider, self.pool, self.cwd, self.strategy)
+        self.heartbeat_task = asyncio.create_task(self.heartbeat())
         return self
 
+    async def heartbeat(self):
+        while True:
+            self.store.update_session(self.session_id)
+            await asyncio.sleep(10)
+
     async def close(self):
+        if self.heartbeat_task:
+            self.heartbeat_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self.heartbeat_task
         if self.runner:
             await self.runner.cleanup()
         if self.client:
             await self.client.close()
+        if self.alert_tasks:
+            await asyncio.gather(*self.alert_tasks, return_exceptions=True)
+        self.store.update_session(self.session_id, ended=True, reason="closed")
 
-    def choose(self, model: str, tried: set[str]) -> Account | None:
+    def eligible(self) -> list[Account]:
+        try:
+            members = self.store.pool_members(self.provider, self.pool) if self.pool else None
+        except ValueError:
+            return []
+        return [
+            a
+            for a in self.store.accounts(self.provider)
+            if a.enabled
+            and (not self.restrict_account or a.name == self.restrict_account)
+            and (members is None or a.name in members)
+            and self.store.health(a)["state"] != "relogin_required"
+        ]
+
+    def choose(self, model: str, tried: set[str], *, proactive: bool = False) -> Account | None:
         now = time.time()
         choices = []
-        for account in self.store.accounts(self.provider):
-            if not account.enabled or account.name in tried:
-                continue
-            if self.restrict_account and account.name != self.restrict_account:
+        for account in self.eligible():
+            if account.name in tried:
                 continue
             until, headroom = availability(self.store, account, model, now)
             if until <= now:
-                choices.append((account.name == self.active, headroom, account.name, account))
-        return max(choices, key=lambda c: c[:3])[-1] if choices else None
+                choices.append((headroom, account))
+        if not choices:
+            return None
+        active = next((c for c in choices if c[1].name == self.active), None)
+        if active and self.last_reason == "exhausted":
+            self.last_reason = "recovered"
+        reason = "quota" if tried else ("unavailable" if self.active else "initial")
+        if active:
+            alternatives = [
+                c
+                for c in choices
+                if c[1].name != self.active and usage_fresh(self.store, c[1], now)
+            ]
+            if (
+                proactive
+                and self.threshold is not None
+                and now - self.changed_at >= 300
+                and usage_fresh(self.store, active[1], now)
+                and active[0] <= 1 - self.threshold / 100
+            ):
+                alternatives = [
+                    c
+                    for c in alternatives
+                    if c[0] > 1 - self.threshold / 100 and c[0] >= active[0] + 0.10
+                ]
+                if alternatives:
+                    choices = alternatives
+                    reason = "proactive"
+                else:
+                    return active[1]
+            else:
+                return active[1]
+        self.last_reason = reason
+        if self.strategy == "ordered" and self.pool:
+            order = self.store.pool_members(self.provider, self.pool)
+            return min(choices, key=lambda c: order.index(c[1].name))[1]
+        if self.strategy == "consume-first":
+
+            def reset(choice):
+                headroom, account = choice
+                _, windows = self.store.usage(account)
+                resets = [
+                    w["resets_at"]
+                    for w in relevant_windows(account, windows, model)
+                    if w.get("period_seconds", 0)
+                    and w["period_seconds"] >= 6 * 86400
+                    and w.get("resets_at", 0)
+                    and w["resets_at"] > now
+                ]
+                return (
+                    min(resets) if resets and usage_fresh(self.store, account, now) else math.inf,
+                    -headroom,
+                    account.name,
+                )
+
+            return min(choices, key=reset)[1]
+        return max(choices, key=lambda c: (c[0], c[1].name))[1]
+
+    def event(self, account: str, kind: str, status: int):
+        self.store.event(
+            self.provider, account, kind, status, session=self.session_id, reason=self.last_reason
+        )
+        if kind in {"switch", "exhausted", "request"}:
+            state = "exhausted" if kind == "exhausted" else account
+            changed = self.store.alert_transition("session:" + self.session_id, state)
+            if changed and self.store.setting("notifications", False):
+                from agent_rotate.notifications import send_desktop
+
+                task = asyncio.create_task(
+                    send_desktop(f"{self.provider} session {self.session_id[:8]}: {state}")
+                )
+                self.alert_tasks.add(task)
+                task.add_done_callback(self.alert_tasks.discard)
 
     def exhausted(self, model: str) -> web.Response:
         now = time.time()
-        waits = [
-            availability(self.store, a, model, now)[0]
-            for a in self.store.accounts(self.provider)
-            if a.enabled and (not self.restrict_account or a.name == self.restrict_account)
-        ]
+        waits = [availability(self.store, a, model, now)[0] for a in self.eligible()]
         wait = max(1, math.ceil(min((t for t in waits if t > now), default=now + 60) - now))
-        self.store.event(self.provider, "", "exhausted", 429)
+        self.last_reason = "exhausted"
+        self.event("", "exhausted", 429)
+        self.store.update_session(self.session_id, reason="exhausted")
         message = (
             "All eligible accounts are cooling down or unavailable. Check agent-rotate status."
         )
@@ -201,6 +318,13 @@ class Router:
         )
 
     async def handle(self, request: web.Request) -> web.StreamResponse:
+        self.in_flight += 1
+        try:
+            return await self._handle(request)
+        finally:
+            self.in_flight -= 1
+
+    async def _handle(self, request: web.Request) -> web.StreamResponse:
         if request.headers.get("Origin") or not hmac.compare_digest(
             request.headers.get("x-agent-rotate-key", "").encode(), self.key.encode()
         ):
@@ -230,13 +354,20 @@ class Router:
         tried: set[str] = set()
         tried_identities: set[str] = set()
         assert self.client
-        while account := self.choose(model, tried):
+        while account := self.choose(
+            model, tried, proactive=(may_rotate and not tried and self.in_flight == 1)
+        ):
+            # Opaque/incremental continuations must stay with their original account.
+            if not may_rotate and self.active and account.name != self.active:
+                return web.json_response({"error": "Continuation account unavailable"}, status=409)
             tried.add(account.name)
             try:
                 credential = await self.credentials.get(account)
-            except CredentialError:
+            except CredentialError as exc:
+                if exc.permanent:
+                    self.store.set_health(account, "relogin_required", "revoked_login")
                 self.store.cooldown(account, "*", time.time() + 60, "auth")
-                self.store.event(self.provider, account.name, "auth", 401)
+                self.event(account.name, "auth", 401)
                 self.report(f"{account.name}: login unavailable; skipping")
                 continue
             identity = credential.identity or credential.account_id or credential.token
@@ -244,11 +375,20 @@ class Router:
                 continue
             tried_identities.add(identity)
             if self.active and self.active != account.name:
-                self.store.event(self.provider, account.name, "switch", 0)
+                self.event(account.name, "switch", 0)
                 self.report(f"{self.provider}: {self.active} → {account.name}")
             elif not self.active:
+                self.store.alert_transition("session:" + self.session_id, account.name)
                 self.report(f"{self.provider}: using {account.name}")
+            if self.active != account.name:
+                self.changed_at = time.time()
             self.active = account.name
+            self.store.update_session(
+                self.session_id,
+                account=account.name,
+                reason=self.last_reason,
+                model=model if model != "*" else None,
+            )
             try:
                 for auth_attempt in range(2):
                     response = await self.client.request(
@@ -264,6 +404,10 @@ class Router:
                     fresh = await self.credentials.get(account, refresh=True)
                     credential = fresh
                 async with response:
+                    if response.status == 401:
+                        self.store.set_health(account, "relogin_required", "rejected_after_refresh")
+                    elif response.status == 200:
+                        self.store.set_health(account, "ready")
                     if 300 <= response.status < 400:
                         # Also prevent the native client from following a redirect while
                         # carrying its own credentials or the local capability header.
@@ -299,7 +443,7 @@ class Router:
                         if initial_quota_event(prefix):
                             self.quota(account, model, response.headers, b"{}")
                             continue
-                    self.store.event(self.provider, account.name, "request", response.status)
+                    self.event(account.name, "request", response.status)
                     outgoing = web.StreamResponse(
                         status=response.status, headers=clean_headers(response.headers)
                     )
@@ -316,8 +460,10 @@ class Router:
                         if request.transport:
                             request.transport.close()
                     return outgoing
-            except CredentialError:
-                self.store.event(self.provider, account.name, "auth", 401)
+            except CredentialError as exc:
+                if exc.permanent:
+                    self.store.set_health(account, "relogin_required", "revoked_login")
+                self.event(account.name, "auth", 401)
                 return web.json_response(
                     {
                         "error": {
@@ -328,7 +474,7 @@ class Router:
                     status=401,
                 )
             except (aiohttp.ClientError, TimeoutError):
-                self.store.event(self.provider, account.name, "transport", 502)
+                self.event(account.name, "transport", 502)
                 return web.json_response(
                     {
                         "error": {
@@ -343,7 +489,7 @@ class Router:
     def quota(self, account: Account, model: str, headers, body: bytes):
         until = cooldown_until(headers, body, time.time())
         self.store.cooldown(account, model, until)
-        self.store.event(self.provider, account.name, "quota", 429)
+        self.event(account.name, "quota", 429)
         self.report(
             f"{account.name}: quota reached; cooling down for {math.ceil(until - time.time())}s"
         )

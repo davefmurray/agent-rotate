@@ -8,9 +8,12 @@ Build a local account router for the real Claude Code and Codex CLIs. The produc
 - Keep provider pools separate. Do not change the requested model, provider, permissions, sandbox, or billing mode during failover.
 - A request may be retried only after an explicit upstream HTTP 429 or an initial structured quota-error event before any stream bytes reach the client. Never replay a partial response, arbitrary 5xx, network timeout, tool result, or approval decision.
 - Honor per-account cooldowns and Retry-After. Each account gets at most one quota attempt per incoming request. Exhaustion returns a bounded failure, not a spin loop.
-- Keep sessions sticky until quota requires a switch. Do not rotate global files beneath other sessions.
+- Keep sessions sticky by default. Explicit proactive thresholds may switch between independent requests after a five-minute dwell and at least ten percentage points of additional headroom. Never switch opaque/incremental continuations proactively. Do not rotate global files beneath other sessions.
 - Bind only to loopback, authenticate every proxy request, reject browser origins, use fixed provider upstreams and explicit paths, and never follow redirects with credentials.
 - Tokens stay in their existing credential stores. Never print, commit, log, or include them in exceptions, fixtures, screenshots, or issue bodies. Runtime records contain only allowlisted metadata.
+- Usage-endpoint failures are not inference exhaustion. Coordinate polls through shared leases and honor usage backoff independently of model cooldowns.
+- Local directory mappings and explicit account/pool restrictions must fail closed. No project-supplied settings may silently widen the pool.
+- MCP is cached/read-only by default. Delegation requires explicit server opt-in and a fixed workspace; jobs use native restricted permissions, accept prompts over stdin, and retain only private final-result artifacts. Never restart a failed job automatically.
 - Claude Rotate remains the sole owner of imported Claude OAuth refresh. Codex manages its own login/refresh via the official CLI app server. Do not implement competing refresh-token writers.
 - Preserve MIT attribution for the pinned Claude Rotate dependency. Do not vendor or copy implementation without its license.
 - Do not describe synthetic failover tests as live provider-quota verification. Keep the README compatibility/limitations table honest.

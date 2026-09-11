@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-rotate"
-version = "0.1.0"
+version = "0.2.0"
 description = "Keep native Claude Code and Codex sessions running across subscription quotas"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,10 +12,17 @@ license = "MIT"
 dependencies = [
   "aiohttp>=3.12,<4",
   "claude-rotate @ git+https://github.com/evrenverse/claude-rotate@d650deb5ac645cd9f01f400d58c44394e8dba996",
+  "mcp>=1.12,<2",
+  "rich>=13,<15",
 ]
 
 [project.scripts]
 agent-rotate = "agent_rotate.cli:main"
+
+[project.optional-dependencies]
+menubar = [
+    "rumps>=0.4,<1 ; sys_platform == 'darwin'",
+]
 
 [dependency-groups]
 dev = ["pytest>=8", "pytest-asyncio>=1", "pytest-aiohttp>=1", "ruff>=0.12"]
