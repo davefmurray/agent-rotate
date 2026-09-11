@@ -17,6 +17,8 @@ agent-rotate menubar                 # macOS, with the optional menubar extra
 
 The dashboard includes quota bars, reset/cooldown countdowns, reading age, health, actual per-router accounts, and last routing decisions. The macOS menu bar shows cached usage and live sessions and can enable/disable accounts and toggle alerts. Closing it stops the usage monitor it owns.
 
+[View the dashboard previews](../README.md#preview) for sample quota, cooldown, stale-reading, and login-health states. The images use the actual terminal renderer with synthetic data.
+
 Display refresh does not imply an API request. A shared SQLite lease allows one eligible poll per account across processes; normal polling backs off for idle accounts, failures, and usage-endpoint 429s. The last successful reading stays visible, with stale/error markers. Polling starts conservatively around 2–5 minutes and may slow further. Provider-specific limits can change; these intervals are not provider guarantees. Native credential owners still perform refresh.
 
 `watch` and `daemon` atomically publish `status.json` in the Agent Rotate data directory, mode 0600. It contains `schema_version: 1`, generation/observation times, accounts, pools, and live sessions. It contains no gateway capability key, tokens, prompts, or response bodies. Consumers must check observation age; a file can outlive its publisher.

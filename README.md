@@ -36,6 +36,7 @@ Agent Rotate routes model requests through an authenticated local proxy. When an
 <summary>On this page</summary>
 
 - [Features](#features)
+- [Preview](#preview)
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [A session at quota](#a-session-at-quota)
@@ -72,6 +73,18 @@ Agent Rotate routes model requests through an authenticated local proxy. When an
 | 🔔 | Optional desktop alerts | Local switch/health notifications and explicit launchd or user-systemd service installation. |
 | 🐚 | Shell + automation support | Bash/zsh/fish completion scripts, structured JSON status, and a private local status feed. |
 | 🔐 | Native credential ownership | Claude Rotate and Codex retain their credential stores and refresh logic; routing preserves model and native permissions. |
+
+## Preview
+
+**Quota dashboard and routed sessions**
+
+[![Agent Rotate terminal dashboard with sample Claude and Codex accounts, quota bars, reset times, and routed sessions](docs/assets/dashboard.png)](docs/assets/dashboard.png)
+
+**Cooldowns, stale readings, and login health**
+
+[![Agent Rotate sample diagnostic view showing a 15-minute cooldown, a login requiring repair, stale usage, and an exhausted session](docs/assets/routing-health.png)](docs/assets/routing-health.png)
+
+These previews use the real terminal renderer with **sample data**, not live account readings. Click either image for the full-size view. [Image details and regeneration](docs/assets/README.md).
 
 ## Requirements
 
